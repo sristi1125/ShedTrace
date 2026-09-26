@@ -1,26 +1,30 @@
-# ShedTrace
+## BlindSpot - Helping New Yorkers know the safety of their buildings. (Hack the city)
 
-The paper trail behind every shed.
+## The Problem
+New Yorkers Sign Leases Blind. Many buildings have Fire hazards, broken self-closing doors, also, sidewalk sheds standing 5+ years signal active facade failure. 311 complaints for sewer backups and basement flooding go unheard. 
 
-## Setup
+## The Solution
+A website where we allow users to enter an adress, and we give them the details on the building such as if there are any sidewalk sheds, the level of safety when it comes to fire hazards, building maintenance and water floods.
 
-1. Download 3 CSVs from NYC Open Data and put them in the `data/` folder:
-   - Sidewalk shed permits → save as `data/sidewalk_sheds.csv`
-   - DOB Violations → save as `data/dob_violations.csv`
-   - DOB Complaints Received → save as `data/dob_complaints.csv`
+## Key Features
 
-2. Build and start the app:
-   ```
-   docker compose up --build
-   ```
+## How it works
 
-3. First, check your real column names by running:
-   ```
-   docker compose run app python pipeline.py
-   ```
-   Copy the printed column names into the `# VERIFY` lines at the top of `pipeline.py`.
-
-4. Re-run `docker compose up --build` and open http://localhost:8501
-
-## Built With
+## Tech Stack
+FrontEnd: 
+BackEnd: 
+Database: 
 Python, Streamlit, pandas, Docker, Cursor, VS Code
+
+## Link to presentation Slides
+
+## Link to Demo, and how to run it
+
+## Future Improvements
+
+## Team
+Sristi : 
+Brandon: Frontend, UI
+Kadidja : Demo, Presentation Designer
+Tanmay: 
+
