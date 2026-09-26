@@ -21,3 +21,6 @@ The paper trail behind every shed.
    Copy the printed column names into the `# VERIFY` lines at the top of `pipeline.py`.
 
 4. Re-run `docker compose up --build` and open http://localhost:8501
+
+## Built With
+Python, Streamlit, pandas, Docker, Cursor, VS Code
