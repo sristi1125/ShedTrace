@@ -5,6 +5,7 @@ ShedTrace data pipeline.
 import pandas as pd
 from datetime import datetime
 from complaint_codes import describe_complaint_category
+from safety_categories import classify_violation, classify_complaint
 
 DATA_DIR = "data/"
 
@@ -26,17 +27,47 @@ COMP_BIN_COL = "BIN"
 COMP_DATE_COL = "Date Entered"
 COMP_TYPE_COL = "Complaint Category"
 
+ELEVATOR_FILE = DATA_DIR + "elevator_safety.csv"
+ELEV_BIN_COL = "BIN"
+ELEV_DEVICE_NUM_COL = "Device Number"
+ELEV_TYPE_COL = "Device Type"
+ELEV_STATUS_COL = "Device Status"
+ELEV_INSPECTION_COL = "Periodic Latest Inspection Date"
+ELEV_CAT1_COL = "CAT1 Latest Report Filed Date"
+
+FIRE_FILE = DATA_DIR + "fire_safety.csv"
+FIRE_BIN_COL = "BIN"
+FIRE_STATUS_COL = "LAST_INSP_STAT"
+FIRE_VISIT_COL = "LAST_VISIT_DT"
+FIRE_INSPECTION_COL = "LAST_FULL_INSP_DT"
+FIRE_OWNER_COL = "OWNER_NAME"
+
+
+def _clean_bin(series):
+    """These BIN columns arrive as floats like 1001627.0 -- convert to a
+    clean string '1001627' so it matches the shed/violation BIN strings."""
+    return (
+        pd.to_numeric(series, errors="coerce")
+        .fillna(0)
+        .astype(int)
+        .astype(str)
+    )
+
 
 def load_data():
     sheds = pd.read_csv(SHED_FILE, low_memory=False)
     violations = pd.read_csv(VIOLATIONS_FILE, low_memory=False)
     complaints = pd.read_csv(COMPLAINTS_FILE, low_memory=False)
+    elevator = pd.read_csv(ELEVATOR_FILE, low_memory=False)
+    fire = pd.read_csv(FIRE_FILE, low_memory=False)
 
     sheds[SHED_BIN_COL] = sheds[SHED_BIN_COL].astype(str)
     violations[VIOL_BIN_COL] = violations[VIOL_BIN_COL].astype(str)
     complaints[COMP_BIN_COL] = complaints[COMP_BIN_COL].astype(str)
+    elevator[ELEV_BIN_COL] = _clean_bin(elevator[ELEV_BIN_COL])
+    fire[FIRE_BIN_COL] = _clean_bin(fire[FIRE_BIN_COL])
 
-    return sheds, violations, complaints
+    return sheds, violations, complaints, elevator, fire
 
 
 def find_bin_for_address(sheds_df, address: str):
@@ -100,6 +131,53 @@ def get_complaints(complaints_df, bin_number):
     return result
 
 
+def get_elevator_safety(elevator_df, bin_number):
+    rows = elevator_df[elevator_df[ELEV_BIN_COL] == bin_number]
+    result = []
+    for _, row in rows.iterrows():
+        result.append({
+            "device_number": row.get(ELEV_DEVICE_NUM_COL),
+            "device_type": row.get(ELEV_TYPE_COL),
+            "status": row.get(ELEV_STATUS_COL),
+            "last_inspection": pd.to_datetime(row.get(ELEV_INSPECTION_COL), errors="coerce"),
+            "last_cat1_filed": pd.to_datetime(row.get(ELEV_CAT1_COL), errors="coerce"),
+        })
+    return result
+
+
+def get_fire_safety(fire_df, bin_number):
+    rows = fire_df[fire_df[FIRE_BIN_COL] == bin_number]
+    result = []
+    for _, row in rows.iterrows():
+        result.append({
+            "owner": row.get(FIRE_OWNER_COL),
+            "status": row.get(FIRE_STATUS_COL),
+            "last_visit": pd.to_datetime(row.get(FIRE_VISIT_COL), errors="coerce"),
+            "last_full_inspection": pd.to_datetime(row.get(FIRE_INSPECTION_COL), errors="coerce"),
+        })
+    return result
+
+
+def get_elevator_related_violations(violations_df, bin_number):
+    all_v = get_violations(violations_df, bin_number)
+    return [v for v in all_v if classify_violation(v["description"]) == "elevator"]
+
+
+def get_elevator_related_complaints(complaints_df, bin_number):
+    all_c = get_complaints(complaints_df, bin_number)
+    return [c for c in all_c if classify_complaint(c["type"]) == "elevator"]
+
+
+def get_fire_related_violations(violations_df, bin_number):
+    all_v = get_violations(violations_df, bin_number)
+    return [v for v in all_v if classify_violation(v["description"]) == "fire"]
+
+
+def get_fire_related_complaints(complaints_df, bin_number):
+    all_c = get_complaints(complaints_df, bin_number)
+    return [c for c in all_c if classify_complaint(c["type"]) == "fire"]
+
+
 def build_timeline(shed_history, violations, complaints):
     timeline = []
 
@@ -121,7 +199,7 @@ def build_timeline(shed_history, violations, complaints):
     return timeline
 
 
-def get_building_report(address: str, sheds_df, violations_df, complaints_df):
+def get_building_report(address: str, sheds_df, violations_df, complaints_df, elevator_df, fire_df):
     bin_number = find_bin_for_address(sheds_df, address)
     if bin_number is None:
         return None
@@ -133,6 +211,15 @@ def get_building_report(address: str, sheds_df, violations_df, complaints_df):
     violations = get_violations(violations_df, bin_number)
     complaints = get_complaints(complaints_df, bin_number)
     timeline = build_timeline(shed_history, violations, complaints)
+
+    elevator_records = get_elevator_safety(elevator_df, bin_number)
+    fire_records = get_fire_safety(fire_df, bin_number)
+
+    elevator_related_violations = get_elevator_related_violations(violations_df, bin_number)
+    elevator_related_complaints = get_elevator_related_complaints(complaints_df, bin_number)
+
+    fire_related_violations = get_fire_related_violations(violations_df, bin_number)
+    fire_related_complaints = get_fire_related_complaints(complaints_df, bin_number)
 
     open_violations = [
         v for v in violations
@@ -146,15 +233,22 @@ def get_building_report(address: str, sheds_df, violations_df, complaints_df):
         "open_violation_count": len(open_violations),
         "complaint_count": len(complaints),
         "timeline": timeline,
+        "elevator_records": elevator_records,
+        "fire_records": fire_records,
+        "elevator_related_violations": elevator_related_violations,
+        "elevator_related_complaints": elevator_related_complaints,
+        "fire_related_violations": fire_related_violations,
+        "fire_related_complaints": fire_related_complaints,
     }
 
 
 if __name__ == "__main__":
-    sheds, violations, complaints = load_data()
-    print("Loaded", len(sheds), "sheds,", len(violations), "violations,", len(complaints), "complaints")
+    sheds, violations, complaints, elevator, fire = load_data()
+    print("Loaded", len(sheds), "sheds,", len(violations), "violations,", len(complaints), "complaints,",
+          len(elevator), "elevator records,", len(fire), "fire records")
 
     sample_address = sheds.iloc[0][SHED_HOUSE_COL] + " " + str(sheds.iloc[0][SHED_STREET_COL])
     print("Testing with address:", sample_address)
 
-    report = get_building_report(sample_address, sheds, violations, complaints)
+    report = get_building_report(sample_address, sheds, violations, complaints, elevator, fire)
     print(report)
