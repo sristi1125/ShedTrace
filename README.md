@@ -1,74 +1,70 @@
-# ShedTrace
+# 🏗️ ShedTrace
 
 **The paper trail behind every shed.**
 
-## What is this?
-
-New Yorkers walk under sidewalk sheds every day with no idea how long they've
-been there, why they're still up, or whether the building behind them has a
-history of safety problems. ShedTrace lets you enter a NYC address and see
-the real public record for that building — not a guess, not a score, just
-the documented evidence.
+ShedTrace is a NYC building-safety evidence tool built for DivHacks 2026. Enter an address, and it connects real NYC public records for that building — sidewalk shed history, DOB violations, DOB complaints, elevator safety records, and FDNY fire inspections — into one evidence timeline, joined by the building's BIN (Building Identification Number).
 
 ## The Problem
 
-Some NYC sidewalk sheds have stood for years — long past what a normal
-repair job should take. Meanwhile, DOB violations, 311 complaints, elevator
-inspection records, and FDNY fire safety records for that same building
-often sit scattered across separate city databases that nobody cross-references.
-ShedTrace pulls them together for one address at a time.
+This information already exists, but it's scattered across separate NYC public datasets. Investigating one building means searching multiple systems by hand and piecing the timeline together yourself.
 
 ## The Solution
 
-Enter an address. ShedTrace looks up the building and shows:
+Enter an address → ShedTrace finds the building's BIN, confirms it has an active shed on file, pulls records from all five datasets, joins them by BIN, and presents one chronological building profile instead of five disconnected sources.
 
-- **Shed Timeline** — how long the sidewalk shed has been up, how many times
-  the permit has been renewed, and a chronological timeline of every
-  violation and complaint filed against that building
-- **Elevator Safety** — real elevator device records for that building
-  (status, inspection dates, CAT1 filings), plus any elevator-related
-  violations or complaints on file
-- **Fire Safety** — real FDNY inspection visit history for that building
-  (status, visit dates), plus any fire-related violations or complaints
-  on file
+## Features
 
-All of it comes from real NYC public data, joined by the building's BIN
-(Building Identification Number) — not estimates, not AI-generated guesses.
+- **Shed Timeline** — shed installation/renewal history, merged with the building's violations and complaints, sorted chronologically
+- **Elevator Safety** — real device records (type, status, last inspection, last CAT1 filing) from DOB NOW: Elevator Safety Compliance, with an expandable elevator-specific violation/complaint history
+- **Fire Safety** — real FDNY inspection records, with raw status codes decoded into plain English (e.g. `NOT APPROVAL(W/REASON)` → "Failed inspection (reason noted)"), plus fire-related violation/complaint history
+- **3D Map View** — the investigated building rendered as a 3D bar, height reflecting violation/complaint volume; tap/hover to see the data
+- **Ask AI** — a Gemini assistant scoped to only the currently investigated building's real data, instructed to say when the data doesn't answer a question rather than guess
 
-## What's Built So Far
+**Demo building:** 900 Grand Concourse — 14.8-year-old active shed, 106 violations, 215 complaints.
 
-**Core pipeline (real NYC Open Data, joined by BIN):**
-1. Sidewalk Shed Permits — shed duration, renewal history
-2. DOB Violations — joined per building
-3. DOB Complaints — decoded using the official DOB complaint category
-   code list (raw codes turned into plain-English descriptions)
-4. Elevator Safety (DOB NOW: Elevator Safety Compliance) — device status,
-   inspection dates, CAT1 filings
-5. Fire Safety (FDNY Bureau of Fire Prevention Inspections) — inspection
-   visit history and status
+## Why Only Shed Buildings?
 
-**UI:**
-- Main view: chronological evidence timeline for the shed itself (capped
-  at 15 most recent events, with an expander for the full history)
-- Separate **Elevator Safety** tab: device-level data plus an expandable
-  history of elevator-related violations/complaints for that building
-- Separate **Fire Safety** tab: inspection records plus an expandable
-  history of fire-related violations/complaints for that building
+Intentional scope: the core question is "why is this specific shed still standing," not a generic citywide lookup tool. The BIN-based architecture could extend to any building later.
 
-**Tested end-to-end** with real addresses, including a dramatic example:
-900 Grand Concourse — a 14.8-year-old active shed with 106 violations and
-215 complaints on record.
+## Data Sources
 
-**Known limitations (documented, not hidden):**
-- Address lookup currently only works for buildings that already have a
-  sidewalk shed on file — intentional, since the core focus is shed
-  buildings, not a citywide address lookup
-- Some complaint/violation codes fall outside our decoding table and
-  display as raw codes
-- FDNY fire data has some rows with missing BIN, so not every fire
-  inspection record
-4. Open `http://localhost:8501` in your browser
+NYC Open Data: Sidewalk Shed Permits, DOB Violations, DOB Complaints Received, DOB NOW: Elevator Safety Compliance (`e5aq-a4j2`). FDNY: Bureau of Fire Prevention Inspections (`ssq6-fkht`). Joined by BIN.
 
-## Built With
+## Tech Stack
 
-Python, Streamlit, pandas, Docker, Cursor, VS Code
+Python + pandas (pipeline), Streamlit (UI), Google Gemini (AI assistant), Docker/Docker Compose (dev environment).
+
+## Getting Started
+
+```bash
+git clone https://github.com/sristi1125/ShedTrace.git
+cd ShedTrace
+```
+
+Create a `.env` file:
+```env
+GEMINI_API_KEY=your_api_key_here
+```
+
+Run it:
+```bash
+docker compose up --build
+```
+Open `http://localhost:8501`.
+
+## Known Limitations
+
+- Data is a snapshot downloaded during development, not a live feed
+- Only works for buildings with an active shed on file (intentional)
+- Elevator dataset gives current status only, no history of status changes over time
+
+## Future Work
+
+- Live data refresh from NYC Open Data API
+- Citywide building lookup
+- 3D map showing multiple buildings at once
+- Historical elevator status tracking
+
+---
+
+Built using the help of Grok, Cursor, and the Gemini API.
