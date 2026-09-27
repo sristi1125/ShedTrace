@@ -116,7 +116,7 @@ if report is not None:
                     else "Unknown"
                 )
                 st.write(
-                    f"- Status: **{f['status']}** — Last visit: {visited}"
+                    f"- Status: **{f['status_label']}** — Last visit: {visited}"
                 )
 
             with st.expander("View fire safety history"):

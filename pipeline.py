@@ -6,6 +6,7 @@ import pandas as pd
 from datetime import datetime
 from complaint_codes import describe_complaint_category
 from safety_categories import classify_violation, classify_complaint
+from fire_status_codes import describe_fire_status
 
 DATA_DIR = "data/"
 
@@ -152,6 +153,7 @@ def get_fire_safety(fire_df, bin_number):
         result.append({
             "owner": row.get(FIRE_OWNER_COL),
             "status": row.get(FIRE_STATUS_COL),
+            "status_label": describe_fire_status(row.get(FIRE_STATUS_COL)),
             "last_visit": pd.to_datetime(row.get(FIRE_VISIT_COL), errors="coerce"),
             "last_full_inspection": pd.to_datetime(row.get(FIRE_INSPECTION_COL), errors="coerce"),
         })
